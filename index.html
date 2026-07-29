@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Last Village</title>
+<style>
+  :root{
+    --night-900:#0a0d16;
+    --night-800:#111726;
+    --night-700:#1b2338;
+    --panel:#141b2c;
+    --line:#28324a;
+    --ink-100:#eef1fb;
+    --ink-400:#8f9ac2;
+    --gold-400:#ffd166;
+    --gold-200:#fff1c7;
+    --green-400:#4ade80;
+    --yellow-400:#fbbf24;
+    --red-400:#ff5470;
+    --blue-400:#5eb1ff;
+    --orange-400:#ff9a4d;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    background:var(--night-900);
+    overscroll-behavior:none;
+  }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+    color:var(--ink-100);
+  }
+
+  .stage{
+    position:relative;
+    width:min(96vw, 960px);
+    aspect-ratio: 960 / 640;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 30px 80px -20px rgba(0,0,0,0.7),
+      0 0 120px -40px rgba(255,209,102,0.12);
+    background:var(--night-800);
+  }
+
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    touch-action:none;
+    cursor:crosshair;
+  }
+
+  /* ---------- HUD ---------- */
+  .hud{
+    position:absolute;
+    top:0; left:0; right:0;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    padding:14px 18px;
+    pointer-events:none;
+    z-index:5;
+  }
+
+  .hud-block{ display:flex; flex-direction:column; gap:2px; }
+  .hud-block.right{ align-items:flex-end; }
+
+  .hud-label{
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-400);
+    font-weight:600;
+  }
+
+  .hud-value{
+    font-size:26px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    line-height:1.1;
+  }
+
+  #goldValue{ color:var(--gold-200); text-shadow:0 0 16px rgba(255,209,102,0.45); }
+  #timerValue{ color:var(--ink-100); }
+
+  .gold-row{ display:flex; align-items:center; gap:7px; }
+  .coin-icon{
+    width:18px; height:18px;
+    border-radius:50%;
+    flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%, #fff2c2, #ffd166 55%, #c9962c 85%, #7a5a12 100%);
+    box-shadow:0 0 8px rgba(255,209,102,0.55), inset 0 -2px 3px rgba(0,0,0,0.25);
+  }
+
+  .core-hp{
+    position:absolute;
+    top:14px; left:50%;
+    transform:translateX(-50%);
+    width:220px;
+    pointer-events:none;
+    z-index:5;
+    text-align:center;
+  }
+  .core-hp-label{
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--ink-400);
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .core-hp-track{
+    width:100%;
+    height:10px;
+    border-radius:6px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .core-hp-fill{
+    height:100%;
+    width:100%;
+    background:var(--green-400);
+    transition:width 0.15s ease, background 0.25s ease;
+  }
+
+  .legend{
+    position:absolute;
+    bottom:10px; left:0; right:0;
+    text-align:center;
+    font-size:11.5px;
+    color:var(--ink-400);
+    opacity:0.75;
+    letter-spacing:0.02em;
+    pointer-events:none;
+    z-index:5;
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(6,8,14,0.78);
+    backdrop-filter:blur(3px);
+    z-index:10;
+    text-align:center;
+  }
+  .overlay.hidden{ display:none; }
+
+  .card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    padding:34px 40px;
+    max-width:82%;
+  }
+
+  .card h1{
+    margin:0;
+    font-size:32px;
+    letter-spacing:3px;
+    color:var(--gold-400);
+    text-shadow:0 0 10px rgba(255,209,102,0.5), 0 0 26px rgba(255,209,102,0.25);
+  }
+  .card h2{
+    margin:0;
+    font-size:26px;
+    letter-spacing:2px;
+  }
+  .card h2.win{ color:var(--green-400); text-shadow:0 0 14px rgba(74,222,128,0.4); }
+  .card h2.lose{ color:var(--red-400); text-shadow:0 0 14px rgba(255,84,112,0.4); }
+
+  .card p{
+    margin:0;
+    font-size:14.5px;
+    color:var(--ink-400);
+    line-height:1.6;
+    max-width:420px;
+  }
+  .card p b{ color:var(--ink-100); }
+
+  .card button{
+    margin-top:6px;
+    padding:12px 30px;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--night-900);
+    background:var(--gold-400);
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(255,209,102,0.3);
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .card button:hover{ transform:translateY(-1px); box-shadow:0 8px 24px rgba(255,209,102,0.42); }
+  .card button:active{ transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <canvas id="game" width="960" height="640"></canvas>
+
+  <div class="hud">
+    <div class="hud-block">
+      <div class="hud-label">Gold</div>
+      <div class="hud-value gold-row"><span class="coin-icon"></span><span id="goldValue">50</span></div>
+    </div>
+    <div class="hud-block right">
+      <div class="hud-label">Survive</div>
+      <div class="hud-value" id="timerValue">10:00</div>
+    </div>
+  </div>
+
+  <div class="core-hp">
+    <div class="core-hp-label">Town Core</div>
+    <div class="core-hp-track"><div class="core-hp-fill" id="coreHpFill"></div></div>
+  </div>
+
+  <div class="legend">WASD move &middot; Aim &amp; click to shoot &middot; Click core / towers / forge to build &amp; upgrade</div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="card">
+      <h1>THE LAST VILLAGE</h1>
+      <p>Enemies are marching on your town. Shoot them for gold, then spend it to build towers,
+      repair the <b>town core</b>, and upgrade your weapon at the <b>forge</b> &mdash; all without leaving the fight.
+      Survive <b>10 minutes</b> to win.</p>
+      <p><b>WASD</b> move &middot; <b>Mouse</b> aim &middot; <b>Click</b> to shoot &middot; <b>Click</b> gold objects to build / repair / upgrade</p>
+      <button id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="winOverlay">
+    <div class="card">
+      <h2 class="win">VILLAGE SAVED</h2>
+      <p>You held the line for the full 10 minutes. Final gold: <b id="winGold">0</b>.</p>
+      <button id="winBtn">Play Again</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="loseOverlay">
+    <div class="card">
+      <h2 class="lose">THE VILLAGE HAS FALLEN</h2>
+      <p>The town core was destroyed. You survived <b id="loseTime">0:00</b>.</p>
+      <button id="loseBtn">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------
+// Config / balancing
+// ---------------------------------------------------------------------
+const CANVAS_W = 960, CANVAS_H = 640;
+const SESSION_LENGTH = 600; // seconds (10 min)
+const HIT_MARGIN = 14;      // extra forgiving click radius on world objects
+
+const CORE_START = { x: 480, y: 320, radius: 40 };
+const FORGE_POS  = { x: 560, y: 240, radius: 28 };
+const PLAYER_START = { x: 480, y: 380 };
+
+const TOWER_SPOTS_DEF = [
+  { x: 480, y: 160 }, // North
+  { x: 640, y: 320 }, // East
+  { x: 480, y: 480 }, // South
+  { x: 320, y: 320 }, // West
+];
+const TOWER_SPOT_RADIUS = 22;
+
+const WEAPON_TIERS = [
+  { dmg: 8,  rate: 2.5, cost: 0   },
+  { dmg: 12, rate: 3.0, cost: 40  },
+  { dmg: 17, rate: 3.5, cost: 90  },
+  { dmg: 24, rate: 4.0, cost: 160 },
+  { dmg: 34, rate: 4.5, cost: 260 },
+];
+
+// index 0 unused (empty spot); index 1 = build cost/stats, 2-4 = upgrades
+const TOWER_TIERS = [
+  null,
+  { cost: 25,  dmg: 6,  rate: 1.0, range: 150 },
+  { cost: 35,  dmg: 10, rate: 1.3, range: 160 },
+  { cost: 60,  dmg: 16, rate: 1.6, range: 170 },
+  { cost: 100, dmg: 25, rate: 2.0, range: 180 },
+];
+
+const ENEMY_BASE = {
+  runner: { hp: 12, speed: 100, dmg: 2,  gold: 3, radius: 10, color: '#ff9a6b', light: '#ffcda6', dark: '#a8532e' },
+  brute:  { hp: 55, speed: 40,  dmg: 6,  gold: 9, radius: 16, color: '#c65fff', light: '#e3b3ff', dark: '#7a2fb0' },
+};
+
+const REPAIR_COST = 15, REPAIR_AMOUNT = 20;
+const PLAYER_SPEED = 220;
+const BULLET_SPEED = 480, BULLET_RADIUS = 4;
+const MAGNET_RADIUS = 90, PICKUP_RADIUS = 16, MAGNET_SPEED = 340;
+const CORE_ATTACK_TICK = 1.2; // seconds between contact-damage ticks per enemy
+
+function spawnInterval(elapsed){ return Math.max(0.45, 2.4 - 1.8 * (elapsed / SESSION_LENGTH)); }
+function bruteChance(elapsed){ return Math.min(0.55, 0.08 + 0.47 * (elapsed / SESSION_LENGTH)); }
+function hpScale(elapsed){ return 1 + 1.2 * (elapsed / SESSION_LENGTH); }
+function speedScale(elapsed){ return 1 + 0.25 * (elapsed / SESSION_LENGTH); }
+function dmgScale(elapsed){ return 1 + 0.6 * (elapsed / SESSION_LENGTH); }
+
+// ---------------------------------------------------------------------
+// Setup
+// ---------------------------------------------------------------------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const goldValueEl = document.getElementById('goldValue');
+const timerValueEl = document.getElementById('timerValue');
+const coreHpFillEl = document.getElementById('coreHpFill');
+const startOverlay = document.getElementById('startOverlay');
+const winOverlay = document.getElementById('winOverlay');
+const loseOverlay = document.getElementById('loseOverlay');
+const winGoldEl = document.getElementById('winGold');
+const loseTimeEl = document.getElementById('loseTime');
+
+let state = 'start'; // 'start' | 'playing' | 'won' | 'lost'
+let elapsed = 0;
+let spawnTimer = 2.5;
+let gold = 50;
+
+let core, forge, towerSpots, player;
+let enemies, projectiles, goldDrops, particles;
+let keys = {};
+let mouse = { x: CANVAS_W / 2, y: CANVAS_H / 2, down: false };
+let shake = { time: 0, duration: 0, mag: 0 };
+const ENEMY_HIT_FLASH_TIME = 0.08;
+
+function triggerShake(mag, duration){
+  if (mag >= shake.mag){ shake = { time: duration, duration, mag }; }
+}
+
+function formatTime(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function freshState(){
+  elapsed = 0;
+  spawnTimer = 2.5;
+  gold = 50;
+
+  core = { x: CORE_START.x, y: CORE_START.y, radius: CORE_START.radius, hp: 150, maxHp: 150 };
+  forge = { x: FORGE_POS.x, y: FORGE_POS.y, radius: FORGE_POS.radius, tier: 0 };
+  towerSpots = TOWER_SPOTS_DEF.map(p => ({
+    x: p.x, y: p.y, radius: TOWER_SPOT_RADIUS,
+    state: 'empty', tier: 0, dmg: 0, rate: 0, range: 0, fireCooldown: 0,
+  }));
+
+  player = {
+    x: PLAYER_START.x, y: PLAYER_START.y,
+    angle: 0, speed: PLAYER_SPEED,
+    fireCooldown: 0,
+    damage: 0, fireRate: 0,
+  };
+  applyWeaponTier(0);
+
+  enemies = [];
+  projectiles = [];
+  goldDrops = [];
+  particles = [];
+}
+
+function resetGame(){
+  freshState();
+  state = 'playing';
+  startOverlay.classList.add('hidden');
+  winOverlay.classList.add('hidden');
+  loseOverlay.classList.add('hidden');
+}
+
+freshState();
+
+// ---------------------------------------------------------------------
+// Input
+// ---------------------------------------------------------------------
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) e.preventDefault();
+  keys[k] = true;
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+function toWorld(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (CANVAS_W / rect.width),
+    y: (clientY - rect.top) * (CANVAS_H / rect.height),
+  };
+}
+
+canvas.addEventListener('mousemove', e => {
+  const w = toWorld(e.clientX, e.clientY);
+  mouse.x = w.x; mouse.y = w.y;
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0 || state !== 'playing') return;
+  const w = toWorld(e.clientX, e.clientY);
+  if (handleWorldClick(w.x, w.y)) return; // click consumed by a world object
+  mouse.down = true;
+});
+
+window.addEventListener('mouseup', () => { mouse.down = false; });
+
+function dist(ax, ay, bx, by){ return Math.hypot(ax - bx, ay - by); }
+
+function spawnCoreHitRing(x, y){
+  particles.push({ type: 'ring', x, y, r: 6, life: 0.25, maxLife: 0.25 });
+}
+
+// Returns the WEAPON_TIERS index the forge would become if upgraded next,
+// or null once it's already at max tier.
+function nextWeaponTier(){
+  const tier = forge.tier + 1;
+  return tier < WEAPON_TIERS.length ? tier : null;
+}
+
+function applyWeaponTier(tier){
+  const def = WEAPON_TIERS[tier];
+  forge.tier = tier;
+  player.damage = def.dmg;
+  player.fireRate = def.rate;
+}
+
+// Returns the TOWER_TIERS index this spot would become if bought next,
+// or null once it's already at max tier.
+function nextTowerTier(spot){
+  const tier = spot.state === 'empty' ? 1 : spot.tier + 1;
+  return tier < TOWER_TIERS.length ? tier : null;
+}
+
+function applyTowerTier(spot, tier){
+  const def = TOWER_TIERS[tier];
+  const wasEmpty = spot.state === 'empty';
+  spot.state = 'built';
+  spot.tier = tier;
+  spot.dmg = def.dmg; spot.rate = def.rate; spot.range = def.range;
+  if (wasEmpty) spot.fireCooldown = 0;
+}
+
+function handleWorldClick(wx, wy){
+  // Priority: core -> forge -> tower spots
+  if (dist(wx, wy, core.x, core.y) <= core.radius + HIT_MARGIN){
+    if (core.hp < core.maxHp && gold >= REPAIR_COST){
+      gold -= REPAIR_COST;
+      core.hp = Math.min(core.maxHp, core.hp + REPAIR_AMOUNT);
+    } else if (core.hp >= core.maxHp) {
+      spawnCoreHitRing(core.x, core.y - core.radius - 10);
+    }
+    return true;
+  }
+
+  if (dist(wx, wy, forge.x, forge.y) <= forge.radius + HIT_MARGIN){
+    const tier = nextWeaponTier();
+    if (tier !== null && gold >= WEAPON_TIERS[tier].cost){
+      gold -= WEAPON_TIERS[tier].cost;
+      applyWeaponTier(tier);
+    }
+    return true;
+  }
+
+  for (const spot of towerSpots){
+    if (dist(wx, wy, spot.x, spot.y) <= spot.radius + HIT_MARGIN){
+      const tier = nextTowerTier(spot);
+      if (tier !== null && gold >= TOWER_TIERS[tier].cost){
+        gold -= TOWER_TIERS[tier].cost;
+        applyTowerTier(spot, tier);
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------
+// Update
+// ---------------------------------------------------------------------
+function spawnEnemy(){
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+  const m = 16;
+  if (edge === 0){ x = Math.random() * CANVAS_W; y = -m; }
+  else if (edge === 1){ x = CANVAS_W + m; y = Math.random() * CANVAS_H; }
+  else if (edge === 2){ x = Math.random() * CANVAS_W; y = CANVAS_H + m; }
+  else { x = -m; y = Math.random() * CANVAS_H; }
+
+  const type = Math.random() < bruteChance(elapsed) ? 'brute' : 'runner';
+  const base = ENEMY_BASE[type];
+  enemies.push({
+    type, x, y,
+    hp: base.hp * hpScale(elapsed),
+    maxHp: base.hp * hpScale(elapsed),
+    speed: base.speed * speedScale(elapsed),
+    contactDamage: base.dmg * dmgScale(elapsed),
+    goldDrop: base.gold,
+    radius: base.radius,
+    color: base.color,
+    light: base.light,
+    dark: base.dark,
+    attackCooldown: 0,
+    hitFlash: 0,
+  });
+}
+
+function killEnemy(enemy){
+  enemy.dead = true;
+  goldDrops.push({
+    x: enemy.x, y: enemy.y, amount: enemy.goldDrop,
+    vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+  });
+  for (let i = 0; i < 12; i++){
+    const a = Math.random() * Math.PI * 2;
+    const speed = 70 + Math.random() * 70;
+    particles.push({
+      type: 'burst', x: enemy.x, y: enemy.y,
+      vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+      life: 0.5, maxLife: 0.5, color: enemy.color,
+    });
+  }
+}
+
+function updatePlayer(dt){
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup']) dy -= 1;
+  if (keys['s'] || keys['arrowdown']) dy += 1;
+  if (keys['a'] || keys['arrowleft']) dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  if (dx !== 0 && dy !== 0){ dx *= 0.7071; dy *= 0.7071; }
+
+  player.x = Math.min(CANVAS_W - 16, Math.max(16, player.x + dx * player.speed * dt));
+  player.y = Math.min(CANVAS_H - 16, Math.max(16, player.y + dy * player.speed * dt));
+
+  player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+  if (player.fireCooldown > 0) player.fireCooldown -= dt;
+  if (mouse.down && player.fireCooldown <= 0){
+    projectiles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(player.angle) * BULLET_SPEED,
+      vy: Math.sin(player.angle) * BULLET_SPEED,
+      damage: player.damage, radius: BULLET_RADIUS,
+    });
+    player.fireCooldown = 1 / player.fireRate;
+  }
+}
+
+function updateSpawner(dt){
+  spawnTimer -= dt;
+  if (spawnTimer <= 0){
+    spawnEnemy();
+    spawnTimer = spawnInterval(elapsed);
+  }
+}
+
+function updateEnemies(dt){
+  for (const e of enemies){
+    if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+
+    const d = dist(e.x, e.y, core.x, core.y);
+    if (d > core.radius + e.radius){
+      const ux = (core.x - e.x) / d, uy = (core.y - e.y) / d;
+      e.x += ux * e.speed * dt;
+      e.y += uy * e.speed * dt;
+    } else {
+      e.attackCooldown -= dt;
+      if (e.attackCooldown <= 0){
+        core.hp = Math.max(0, core.hp - e.contactDamage);
+        e.attackCooldown = CORE_ATTACK_TICK;
+        spawnCoreHitRing(core.x, core.y);
+        triggerShake(4 + e.contactDamage * 0.6, 0.22);
+        if (core.hp <= 0 && state === 'playing'){
+          state = 'lost';
+          loseTimeEl.textContent = formatTime(elapsed);
+          loseOverlay.classList.remove('hidden');
+        }
+      }
+    }
+  }
+  enemies = enemies.filter(e => !e.dead);
+}
+
+function updateProjectiles(dt){
+  for (const p of projectiles){
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.x < -20 || p.x > CANVAS_W + 20 || p.y < -20 || p.y > CANVAS_H + 20){ p.dead = true; continue; }
+    for (const e of enemies){
+      if (e.dead) continue;
+      if (dist(p.x, p.y, e.x, e.y) <= p.radius + e.radius){
+        e.hp -= p.damage;
+        e.hitFlash = ENEMY_HIT_FLASH_TIME;
+        p.dead = true;
+        if (e.hp <= 0) killEnemy(e);
+        break;
+      }
+    }
+  }
+  projectiles = projectiles.filter(p => !p.dead);
+}
+
+function updateTowers(dt){
+  for (const spot of towerSpots){
+    if (spot.state !== 'built') continue;
+    if (spot.fireCooldown > 0){ spot.fireCooldown -= dt; continue; }
+    let target = null, best = Infinity;
+    for (const e of enemies){
+      if (e.dead) continue;
+      const d = dist(spot.x, spot.y, e.x, e.y);
+      if (d <= spot.range && d < best){ best = d; target = e; }
+    }
+    if (target){
+      target.hp -= spot.dmg;
+      target.hitFlash = ENEMY_HIT_FLASH_TIME;
+      spot.fireCooldown = 1 / spot.rate;
+      particles.push({
+        type: 'beam', x1: spot.x, y1: spot.y, x2: target.x, y2: target.y,
+        life: 0.12, maxLife: 0.12,
+      });
+      if (target.hp <= 0) killEnemy(target);
+    }
+  }
+}
+
+function updateGold(dt){
+  for (const g of goldDrops){
+    const d = dist(g.x, g.y, player.x, player.y);
+    if (d <= MAGNET_RADIUS){
+      const ux = (player.x - g.x) / (d || 1), uy = (player.y - g.y) / (d || 1);
+      g.x += ux * MAGNET_SPEED * dt;
+      g.y += uy * MAGNET_SPEED * dt;
+    }
+    if (d <= PICKUP_RADIUS){
+      gold += g.amount;
+      g.dead = true;
+      particles.push({
+        type: 'goldText', x: g.x, y: g.y, vy: -34,
+        life: 0.7, maxLife: 0.7, text: '+' + g.amount,
+      });
+    }
+  }
+  goldDrops = goldDrops.filter(g => !g.dead);
+}
+
+function updateParticles(dt){
+  for (const p of particles){
+    p.life -= dt;
+    if (p.type === 'burst'){
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.9; p.vy *= 0.9;
+    } else if (p.type === 'goldText'){
+      p.y += p.vy * dt;
+      p.vy *= 0.92;
+    }
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  if (shake.time > 0){
+    shake.time = Math.max(0, shake.time - dt);
+    if (shake.time === 0) shake.mag = 0;
+  }
+}
+
+function update(dt){
+  elapsed += dt;
+  updatePlayer(dt);
+  updateSpawner(dt);
+  updateEnemies(dt);
+  updateProjectiles(dt);
+  updateTowers(dt);
+  updateGold(dt);
+  updateParticles(dt);
+
+  if (state === 'playing' && elapsed >= SESSION_LENGTH){
+    state = 'won';
+    winGoldEl.textContent = Math.floor(gold);
+    winOverlay.classList.remove('hidden');
+  }
+}
+
+// ---------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------
+function radialGrad(x, y, r, light, dark){
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.05, x, y, r);
+  g.addColorStop(0, light);
+  g.addColorStop(1, dark);
+  return g;
+}
+
+function circlePath(x, y, r){
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+}
+
+function shadowEllipse(x, y, rx, ry){
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function badge(text, x, y, affordable){
+  ctx.save();
+  ctx.font = '600 12px Segoe UI, sans-serif';
+  const iconR = 5, iconGap = 6, padL = 10, padR = 12;
+  const textW = ctx.measureText(text).width;
+  const w = padL + iconR * 2 + iconGap + textW + padR;
+  const h = 20, rx = x - w / 2, ry = y - h / 2, r = 9;
+
+  ctx.fillStyle = affordable ? 'rgba(20,26,42,0.9)' : 'rgba(20,26,42,0.55)';
+  ctx.strokeStyle = affordable ? '#ffd166' : 'rgba(255,209,102,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(rx + r, ry);
+  ctx.arcTo(rx + w, ry, rx + w, ry + h, r);
+  ctx.arcTo(rx + w, ry + h, rx, ry + h, r);
+  ctx.arcTo(rx, ry + h, rx, ry, r);
+  ctx.arcTo(rx, ry, rx + w, ry, r);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  const iconX = rx + padL + iconR, iconY = y;
+  ctx.globalAlpha = affordable ? 1 : 0.5;
+  ctx.fillStyle = radialGrad(iconX, iconY, iconR, '#fff2c2', '#c9962c');
+  circlePath(iconX, iconY, iconR); ctx.fill();
+  ctx.strokeStyle = '#7a5a12';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = affordable ? '#ffe9ad' : 'rgba(255,233,173,0.55)';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, iconX + iconR + iconGap, y + 1);
+  ctx.restore();
+}
+
+const PAVED_INNER = 50, PAVED_OUTER = 102;
+
+const HOUSES = [
+  { x: 438, y: 116, w: 34, h: 30, roof: '#5c3a2e' },
+  { x: 524, y: 122, w: 28, h: 26, roof: '#3a4a63' },
+  { x: 694, y: 278, w: 32, h: 28, roof: '#4a3a2e' },
+  { x: 698, y: 364, w: 30, h: 34, roof: '#5c3a2e' },
+  { x: 436, y: 524, w: 32, h: 28, roof: '#3a4a63' },
+  { x: 526, y: 518, w: 30, h: 30, roof: '#4a3a2e' },
+  { x: 266, y: 276, w: 34, h: 30, roof: '#5c3a2e' },
+  { x: 262, y: 366, w: 28, h: 26, roof: '#3a4a63' },
+];
+
+function drawRoads(){
+  const roads = [
+    [core.x, -30, core.x, core.y - PAVED_OUTER],
+    [CANVAS_W + 30, core.y, core.x + PAVED_OUTER, core.y],
+    [core.x, CANVAS_H + 30, core.x, core.y + PAVED_OUTER],
+    [-30, core.y, core.x - PAVED_OUTER, core.y],
+  ];
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const [x1, y1, x2, y2] of roads){
+    ctx.strokeStyle = 'rgba(94,74,52,0.55)';
+    ctx.lineWidth = 46;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(150,124,90,0.28)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPavedRing(){
+  const midR = (PAVED_INNER + PAVED_OUTER) / 2;
+  const bandW = PAVED_OUTER - PAVED_INNER;
+  ctx.save();
+  ctx.strokeStyle = '#232b3c';
+  ctx.lineWidth = bandW;
+  circlePath(core.x, core.y, midR); ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 20; i++){
+    const a = (i / 20) * Math.PI * 2;
+    const x1 = core.x + Math.cos(a) * PAVED_INNER, y1 = core.y + Math.sin(a) * PAVED_INNER;
+    const x2 = core.x + Math.cos(a) * PAVED_OUTER, y2 = core.y + Math.sin(a) * PAVED_OUTER;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1.5;
+  circlePath(core.x, core.y, PAVED_INNER); ctx.stroke();
+  circlePath(core.x, core.y, PAVED_OUTER); ctx.stroke();
+  ctx.restore();
+}
+
+function drawHouse(h){
+  shadowEllipse(h.x, h.y + h.h * 0.42, h.w * 0.62, h.h * 0.2);
+
+  ctx.save();
+  const bodyTop = h.y - h.h * 0.15;
+  const bodyH = h.h * 0.6;
+  ctx.fillStyle = radialGrad(h.x, h.y, h.w * 0.8, '#5a4a38', '#2a2117');
+  ctx.fillRect(h.x - h.w / 2, bodyTop, h.w, bodyH);
+
+  ctx.fillStyle = h.roof;
+  ctx.beginPath();
+  ctx.moveTo(h.x - h.w / 2 - 4, bodyTop);
+  ctx.lineTo(h.x + h.w / 2 + 4, bodyTop);
+  ctx.lineTo(h.x, bodyTop - h.h * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,209,102,0.85)';
+  ctx.fillRect(h.x - 2, bodyTop + bodyH * 0.35, 4, 4);
+  ctx.restore();
+}
+
+function drawBackground(){
+  ctx.fillStyle = '#141b28';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= CANVAS_W; x += 40){ ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_H); ctx.stroke(); }
+  for (let y = 0; y <= CANVAS_H; y += 40){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke(); }
+  ctx.restore();
+
+  drawRoads();
+  drawPavedRing();
+  for (const h of HOUSES) drawHouse(h);
+
+  const grad = ctx.createRadialGradient(core.x, core.y, 20, core.x, core.y, 220);
+  grad.addColorStop(0, 'rgba(255,209,102,0.10)');
+  grad.addColorStop(1, 'rgba(255,209,102,0)');
+  ctx.fillStyle = grad;
+  circlePath(core.x, core.y, 220); ctx.fill();
+}
+
+function drawCore(){
+  shadowEllipse(core.x, core.y + core.radius * 0.7, core.radius * 0.95, core.radius * 0.32);
+
+  const critical = core.hp <= core.maxHp * 0.35;
+  ctx.save();
+  ctx.fillStyle = radialGrad(core.x, core.y, core.radius, critical ? '#3a2430' : '#33405e', '#14192a');
+  ctx.strokeStyle = critical ? '#ff5470' : '#ffd166';
+  ctx.lineWidth = 3;
+  circlePath(core.x, core.y, core.radius); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 22px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('⚑', core.x, core.y + 1);
+  ctx.restore();
+
+  if (core.hp < core.maxHp){
+    badge(REPAIR_COST + ' → +' + REPAIR_AMOUNT + ' hp', core.x, core.y - core.radius - 16, gold >= REPAIR_COST);
+  }
+}
+
+function drawForge(){
+  shadowEllipse(forge.x, forge.y + forge.radius * 0.7, forge.radius * 0.95, forge.radius * 0.32);
+
+  ctx.save();
+  const glow = 0.3 + 0.15 * forge.tier;
+  ctx.fillStyle = radialGrad(forge.x, forge.y, forge.radius, '#4a3424', '#20140c');
+  ctx.strokeStyle = '#ff9a4d';
+  ctx.shadowColor = 'rgba(255,154,77,' + glow + ')';
+  ctx.shadowBlur = 12 + forge.tier * 4;
+  ctx.lineWidth = 3;
+  circlePath(forge.x, forge.y, forge.radius); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ff9a4d';
+  ctx.font = '700 18px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('⚒', forge.x, forge.y + 1);
+  ctx.restore();
+
+  const nextTier = nextWeaponTier();
+  if (nextTier !== null){
+    const cost = WEAPON_TIERS[nextTier].cost;
+    badge(String(cost), forge.x, forge.y - forge.radius - 14, gold >= cost);
+  }
+}
+
+function drawTowers(){
+  for (const spot of towerSpots){
+    const hovered = dist(mouse.x, mouse.y, spot.x, spot.y) <= spot.radius + 40;
+
+    if (spot.state === 'built' && hovered){
+      ctx.save();
+      ctx.strokeStyle = 'rgba(94,177,255,0.35)';
+      ctx.lineWidth = 1.5;
+      circlePath(spot.x, spot.y, spot.range); ctx.stroke();
+      ctx.restore();
+    }
+
+    if (spot.state === 'built'){
+      shadowEllipse(spot.x, spot.y + spot.radius * 0.7, spot.radius * 0.95, spot.radius * 0.32);
+    }
+
+    ctx.save();
+    if (spot.state === 'empty'){
+      const pulse = 2 + Math.sin(elapsed * 4) * 1.5;
+      ctx.strokeStyle = 'rgba(94,177,255,0.6)';
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 2;
+      circlePath(spot.x, spot.y, spot.radius + pulse); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(94,177,255,0.12)';
+      circlePath(spot.x, spot.y, spot.radius); ctx.fill();
+    } else {
+      ctx.fillStyle = radialGrad(spot.x, spot.y, spot.radius, '#2c4468', '#131a2a');
+      ctx.strokeStyle = '#5eb1ff';
+      ctx.lineWidth = 3;
+      circlePath(spot.x, spot.y, spot.radius); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#5eb1ff';
+      ctx.font = '700 16px Segoe UI, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(spot.tier), spot.x, spot.y + 1);
+    }
+    ctx.restore();
+
+    const nextTier = nextTowerTier(spot);
+    if (nextTier !== null){
+      const cost = TOWER_TIERS[nextTier].cost;
+      badge(String(cost), spot.x, spot.y - spot.radius - 14, gold >= cost);
+    }
+  }
+}
+
+function drawEnemies(){
+  for (const e of enemies){
+    shadowEllipse(e.x, e.y + e.radius * 0.75, e.radius * 0.9, e.radius * 0.32);
+
+    ctx.save();
+    ctx.fillStyle = radialGrad(e.x, e.y, e.radius, e.light, e.dark);
+    circlePath(e.x, e.y, e.radius); ctx.fill();
+    if (e.hitFlash > 0){
+      ctx.globalAlpha = e.hitFlash / ENEMY_HIT_FLASH_TIME;
+      ctx.fillStyle = '#ffffff';
+      circlePath(e.x, e.y, e.radius); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    const w = e.radius * 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(e.x - w / 2, e.y - e.radius - 9, w, 4);
+    ctx.fillStyle = '#ff5470';
+    ctx.fillRect(e.x - w / 2, e.y - e.radius - 9, w * Math.max(0, e.hp / e.maxHp), 4);
+  }
+}
+
+function drawPlayer(){
+  shadowEllipse(player.x, player.y + 9, 12, 5);
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+  ctx.fillStyle = radialGrad(2, 0, 18, '#a8ffc4', '#2f9e5c');
+  ctx.beginPath();
+  ctx.moveTo(16, 0);
+  ctx.lineTo(-10, 9);
+  ctx.lineTo(-10, -9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawProjectiles(){
+  ctx.save();
+  ctx.fillStyle = '#fff4d6';
+  ctx.shadowColor = '#ffd166';
+  ctx.shadowBlur = 8;
+  for (const p of projectiles){
+    circlePath(p.x, p.y, p.radius); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawGold(){
+  for (const g of goldDrops){
+    shadowEllipse(g.x, g.y + 4, 5, 2);
+    ctx.save();
+    ctx.fillStyle = radialGrad(g.x, g.y, 6, '#fff2c2', '#c9962c');
+    ctx.strokeStyle = '#7a5a12';
+    ctx.lineWidth = 1;
+    circlePath(g.x, g.y, 6); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawParticles(){
+  for (const p of particles){
+    const t = p.life / p.maxLife;
+    if (p.type === 'burst'){
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.fillStyle = p.color;
+      circlePath(p.x, p.y, 3); ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'beam'){
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = '#5eb1ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+      ctx.restore();
+    } else if (p.type === 'goldText'){
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, t * 1.5);
+      ctx.fillStyle = '#ffe9ad';
+      ctx.font = '700 13px Segoe UI, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(255,209,102,0.6)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    } else if (p.type === 'ring'){
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = '#ff5470';
+      ctx.lineWidth = 2;
+      circlePath(p.x, p.y, p.r + (1 - t) * 20); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function render(){
+  ctx.save();
+  if (shake.time > 0){
+    const ratio = shake.time / shake.duration;
+    const mag = shake.mag * ratio;
+    ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
+  }
+
+  drawBackground();
+  drawGold();
+  drawCore();
+  drawTowers();
+  drawForge();
+  drawEnemies();
+  drawPlayer();
+  drawProjectiles();
+  drawParticles();
+  ctx.restore();
+
+  goldValueEl.textContent = Math.floor(gold);
+  timerValueEl.textContent = formatTime(SESSION_LENGTH - elapsed);
+  const ratio = Math.max(0, core.hp / core.maxHp);
+  coreHpFillEl.style.width = (ratio * 100) + '%';
+  coreHpFillEl.style.background = ratio > 0.5 ? 'var(--green-400)' : ratio > 0.25 ? 'var(--yellow-400)' : 'var(--red-400)';
+}
+
+// ---------------------------------------------------------------------
+// Main loop
+// ---------------------------------------------------------------------
+let lastTime = performance.now();
+function loop(now){
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  if (state === 'playing') update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('startBtn').addEventListener('click', resetGame);
+document.getElementById('winBtn').addEventListener('click', resetGame);
+document.getElementById('loseBtn').addEventListener('click', resetGame);
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

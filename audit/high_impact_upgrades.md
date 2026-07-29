@@ -1,0 +1,18 @@
+# High-Impact Upgrades — The Last Village
+
+Bigger investments than the quick wins — each takes real implementation effort (multiple hours, new small subsystems) but drives the largest jump in perceived production value. Still scoped to stay within the project's zero-external-asset, single-file convention — everything here is proceduraly drawn in Canvas 2D, not imported art.
+
+## Top 5 high-impact upgrades
+
+1. **Build an actual town environment.** Procedurally draw a paved/cobblestone ring around the core, simple building silhouettes (a few flat-shaded rectangles with pitched-roof triangles) clustered near the tower spots, and worn dirt-path arcs leading from each of the 4 spawn edges toward the core. This directly fixes the single biggest problem identified in this audit ("the town doesn't look like a town") and would likely produce the largest single visual-quality jump available.
+2. **Give every entity a layered silhouette instead of a flat circle.** Rebuild `drawPlayer()`, `drawEnemies()`, `drawTowers()`, `drawCore()`, `drawForge()` so each is 3–5 stacked shapes (body + shadow + highlight + a distinguishing feature) rather than one filled circle. Runners could be small/angular (spiky, fast-looking), brutes large/rounded (heavy, slow-looking) — reinforcing their gameplay role through shape language, not just color and size.
+3. **Add a real "juice" layer: hit-stop, camera shake, and scaling squash/stretch.** Beyond the quick-win screen shake, add a brief global time-scale dip (hit-stop) on kills, a squash/stretch pulse on the player when firing and on enemies when hit, and a small recoil kick on the player sprite. This is the difference between a game that "works" and one that "feels good to play," and compounds with the hit-flash/particle quick wins.
+4. **Animate locomotion.** Give the player a subtle bob/lean while moving and a recoil twitch on fire; give enemies a simple 2-frame procedural walk-wobble (squash the shape rhythmically based on distance traveled) and have them visibly orient/lean toward their movement direction. Removes the current "sliding token" feel.
+5. **Add a cohesive UI icon set and elevate the badge/panel styling.** Replace the plain-text cost badges and bare HUD numbers with a small consistent icon set (coin, tower, wrench/forge, shield/core — all simple vector glyphs drawn or built from CSS shapes, no image assets needed) plus subtle depth (drop shadow, slight gradient) on every panel and badge. Elevates the UI from "clean and functional" to "designed."
+
+## Also worth considering (lower priority than the top 5)
+
+- **Ambient background motion** — slow parallax dust/embers or a faint animated cloud-shadow pass over the ground layer, to make the world feel alive even when nothing is happening.
+- **Weather/time-of-day tint that shifts subtly as the 10-minute timer progresses** — a cheap way to visually communicate the escalating difficulty curve (e.g., sky darkens, more embers/fire glow as elapsed time increases), reinforcing "things are getting more intense" without any UI text.
+- **WebAudio-based sound design** (no external audio files needed — simple oscillator/noise-based SFX via the Web Audio API) for shoot/hit/kill/build/upgrade/repair/damage-core/win/lose. Audio is out of this visual-only audit's scope, but it's usually the next-highest-leverage "premium feel" investment after visuals, and can be done with zero external assets exactly like the rest of this project.
+- **Tower silhouette growth per tier** — instead of only changing the numeral inside the tower circle, have the tower's drawn shape visibly grow/add turret details at each of the 4 tiers, so upgrading is legible from a glance, not just a number readout.
